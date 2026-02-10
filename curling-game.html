@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curling Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            min-width: 200px;
+        }
+        
+        #controls h2 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-text {
+            margin: 10px 0;
+            color: #555;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .info-highlight {
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        #score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            min-width: 200px;
+        }
+        
+        #score h2 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 8px;
+            background: #f5f5f5;
+            border-radius: 6px;
+        }
+        
+        .team-red {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .team-blue {
+            color: #3498db;
+            font-weight: bold;
+        }
+        
+        #endScores {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .end-score-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            padding: 4px 8px;
+            font-size: 13px;
+            background: #fafafa;
+            border-radius: 4px;
+        }
+        
+        .end-score-row.current {
+            background: #fff3cd;
+            font-weight: bold;
+        }
+        
+        .end-label {
+            color: #666;
+        }
+        
+        .end-red-score {
+            color: #e74c3c;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .end-blue-score {
+            color: #3498db;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 600px;
+        }
+        
+        #instructions p {
+            margin: 5px 0;
+            color: #555;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="canvas" width="1200" height="800"></canvas>
+        
+        <div id="controls">
+            <h2>🎯 Controlli</h2>
+            <div class="info-text">
+                <strong>1.</strong> Sposta il <span class="info-highlight">cursore</span> sotto la pietra per la rotazione
+            </div>
+            <div class="info-text">
+                <strong>2.</strong> <span class="info-highlight">Trascina</span> la pietra per mirare e impostare la potenza
+            </div>
+            <div class="info-text">
+                <strong>3.</strong> <span class="info-highlight">Rilascia</span> per lanciare!
+            </div>
+            <button id="resetBtn">🔄 Nuova Partita</button>
+        </div>
+        
+        <div id="score">
+            <h2>📊 Doppio Misto</h2>
+            <div class="score-item">
+                <span class="team-red">Rosso:</span>
+                <span id="redScore">0</span>
+            </div>
+            <div class="score-item">
+                <span class="team-blue">Blu:</span>
+                <span id="blueScore">0</span>
+            </div>
+            <div class="score-item">
+                <span>End:</span>
+                <span id="currentEnd">1/8</span>
+            </div>
+            <div class="score-item">
+                <span>Turno:</span>
+                <span id="currentTurn">Rosso</span>
+            </div>
+            <div class="score-item">
+                <span>Pietre:</span>
+                <span id="stonesLeft">5/5</span>
+            </div>
+            <div id="endScores">
+                <div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: bold;">Punteggi per End:</div>
+            </div>
+        </div>
+        
+        <div id="instructions">
+            <p><strong>Doppio Misto:</strong> 8 end • 5 pietre per squadra per end • Stone già posizionate</p>
+            <p>Sposta il cursore per rotazione, trascina e rilascia la pietra per lanciare!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game state - Mixed Doubles format
+        let stones = [];
+        let currentTeam = 'red';
+        let redScore = 0;
+        let blueScore = 0;
+        let stonesThrown = 0;
+        let stonesPerTeamPerEnd = 5;
+        let currentEnd = 1;
+        let maxEnds = 8;
+        let endScores = []; // Track score per end {end: 1, red: 0, blue: 1}
+        let isAnimating = false;
+        
+        // Drag controls
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragCurrentX = 0;
+        let dragCurrentY = 0;
+        let rotationSliderPos = 0;
+        let isRotationDragging = false;
+        
+        // Launch area
+        const launchArea = {
+            x: canvas.width / 2,
+            y: canvas.height - 50,
+            stoneRadius: 15,
+            rotationSliderY: canvas.height - 100,
+            rotationSliderWidth: 150
+        };
+        
+        // Controls
+        const resetBtn = document.getElementById('resetBtn');
+        
+        // House (target) configuration
+        const house = {
+            x: canvas.width / 2,
+            y: 200,
+            rings: [
+                { radius: 120, color: '#3498db', points: 1 },
+                { radius: 90, color: '#ffffff', points: 2 },
+                { radius: 60, color: '#e74c3c', points: 3 },
+                { radius: 30, color: '#ffffff', points: 4 }
+            ]
+        };
+        
+        // Stone class
+        class Stone {
+            constructor(x, y, vx, vy, spin, team, isPrePositioned = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.spin = spin;
+                this.team = team;
+                this.radius = 15;
+                this.angle = 0;
+                this.friction = 0.98;
+                this.spinDecay = 0.99;
+                this.active = !isPrePositioned;
+                this.isPrePositioned = isPrePositioned;
+            }
+            
+            update() {
+                if (!this.active) return;
+                
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+                
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > 0.1) {
+                    const curlForce = this.spin * 0.015;
+                    
+                    const perpX = -this.vy;
+                    const perpY = this.vx;
+                    const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
+                    
+                    if (perpLength > 0) {
+                        this.vx += (perpX / perpLength) * curlForce;
+                        this.vy += (perpY / perpLength) * curlForce;
+                    }
+                }
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                this.angle += this.spin * 0.1;
+                this.spin *= this.spinDecay;
+                
+                if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
+                    this.vx *= -0.5;
+                    this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+                }
+                
+                if (speed < 0.1) {
+                    this.vx = 0;
+                    this.vy = 0;
+                    this.active = false;
+                }
+                
+                if (this.y < -50) {
+                    this.active = false;
+                    this.vx = 0;
+                    this.vy = 0;
+                }
+            }
+            
+            checkCollision(other) {
+                const dx = other.x - this.x;
+                const dy = other.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < this.radius + other.radius) {
+                    const angle = Math.atan2(dy, dx);
+                    const sin = Math.sin(angle);
+                    const cos = Math.cos(angle);
+                    
+                    const vx1 = this.vx * cos + this.vy * sin;
+                    const vy1 = this.vy * cos - this.vx * sin;
+                    const vx2 = other.vx * cos + other.vy * sin;
+                    const vy2 = other.vy * cos - other.vx * sin;
+                    
+                    const finalVx1 = vx2 * 0.85;
+                    const finalVx2 = vx1 * 0.85;
+                    
+                    this.vx = finalVx1 * cos - vy1 * sin;
+                    this.vy = vy1 * cos + finalVx1 * sin;
+                    other.vx = finalVx2 * cos - vy2 * sin;
+                    other.vy = vy2 * cos + finalVx2 * sin;
+                    
+                    const overlap = (this.radius + other.radius - distance) / 2;
+                    const separateX = overlap * cos;
+                    const separateY = overlap * sin;
+                    
+                    this.x -= separateX;
+                    this.y -= separateY;
+                    other.x += separateX;
+                    other.y += separateY;
+                    
+                    other.active = true;
+                }
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 3;
+                ctx.shadowOffsetY = 3;
+                
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius);
+                if (this.team === 'red') {
+                    gradient.addColorStop(0, '#ff6b6b');
+                    gradient.addColorStop(0.7, '#e74c3c');
+                    gradient.addColorStop(1, '#c0392b');
+                } else {
+                    gradient.addColorStop(0, '#74b9ff');
+                    gradient.addColorStop(0.7, '#3498db');
+                    gradient.addColorStop(1, '#2980b9');
+                }
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowColor = 'transparent';
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius - 3, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                ctx.fillRect(-8, -2, 16, 4);
+                ctx.fillRect(-2, -8, 4, 16);
+                
+                ctx.restore();
+            }
+        }
+        
+        function setupPrePositionedStones() {
+            // Mixed doubles setup: one stone for each team pre-positioned
+            // Red stone in front of house (guard position)
+            stones.push(new Stone(house.x + 20, house.y + 80, 0, 0, 0, 'red', true));
+            
+            // Blue stone behind the button (in the house)
+            stones.push(new Stone(house.x - 15, house.y + 25, 0, 0, 0, 'blue', true));
+        }
+        
+        function drawRink() {
+            const iceGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            iceGradient.addColorStop(0, '#e8f4f8');
+            iceGradient.addColorStop(0.5, '#d1e7ed');
+            iceGradient.addColorStop(1, '#b8dde6');
+            ctx.fillStyle = iceGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = 'rgba(100,100,100,0.3)';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 150);
+            ctx.lineTo(canvas.width, canvas.height - 150);
+            ctx.stroke();
+            
+            house.rings.forEach(ring => {
+                ctx.fillStyle = ring.color;
+                ctx.beginPath();
+                ctx.arc(house.x, house.y, ring.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+            
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.arc(house.x, house.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = 'rgba(100,100,100,0.2)';
+            ctx.beginPath();
+            ctx.moveTo(house.x, 0);
+            ctx.lineTo(house.x, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        function drawLaunchArea() {
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.1)';
+            ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
+            
+            // Draw rotation slider
+            const sliderCenterX = launchArea.x;
+            const sliderY = launchArea.rotationSliderY;
+            const sliderWidth = launchArea.rotationSliderWidth;
+            
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(sliderCenterX - sliderWidth / 2, sliderY);
+            ctx.lineTo(sliderCenterX + sliderWidth / 2, sliderY);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#9b59b6';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('↺', sliderCenterX - sliderWidth / 2 - 15, sliderY + 5);
+            ctx.fillStyle = '#27ae60';
+            ctx.fillText('↻', sliderCenterX + sliderWidth / 2 + 15, sliderY + 5);
+            
+            const handleX = sliderCenterX + (rotationSliderPos * sliderWidth / 2);
+            ctx.fillStyle = rotationSliderPos < 0 ? '#9b59b6' : (rotationSliderPos > 0 ? '#27ae60' : '#666');
+            ctx.beginPath();
+            ctx.arc(handleX, sliderY, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Draw stone in launch position
+            if (!isAnimating && stonesThrown < stonesPerTeamPerEnd * 2) {
+                const stone = {
+                    x: launchArea.x,
+                    y: launchArea.y,
+                    radius: launchArea.stoneRadius
+                };
+                
+                ctx.save();
+                ctx.translate(stone.x, stone.y);
+                
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 3;
+                ctx.shadowOffsetY = 3;
+                
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, stone.radius);
+                if (currentTeam === 'red') {
+                    gradient.addColorStop(0, '#ff6b6b');
+                    gradient.addColorStop(0.7, '#e74c3c');
+                    gradient.addColorStop(1, '#c0392b');
+                } else {
+                    gradient.addColorStop(0, '#74b9ff');
+                    gradient.addColorStop(0.7, '#3498db');
+                    gradient.addColorStop(1, '#2980b9');
+                }
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, stone.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowColor = 'transparent';
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, stone.radius - 3, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                ctx.fillRect(-8, -2, 16, 4);
+                ctx.fillRect(-2, -8, 4, 16);
+                
+                ctx.restore();
+                
+                if (isDragging) {
+                    const dx = dragCurrentX - dragStartX;
+                    const dy = dragCurrentY - dragStartY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const maxDistance = 200;
+                    const power = Math.min(distance / maxDistance, 1);
+                    
+                    ctx.strokeStyle = currentTeam === 'red' ? `rgba(231,76,60,${0.3 + power * 0.7})` : `rgba(52,152,219,${0.3 + power * 0.7})`;
+                    ctx.lineWidth = 8;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(stone.x, stone.y);
+                    ctx.lineTo(dragCurrentX, dragCurrentY);
+                    ctx.stroke();
+                    
+                    const angle = Math.atan2(dragCurrentY - stone.y, dragCurrentX - stone.x);
+                    ctx.fillStyle = ctx.strokeStyle;
+                    ctx.save();
+                    ctx.translate(dragCurrentX, dragCurrentY);
+                    ctx.rotate(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(-15, -8);
+                    ctx.lineTo(-15, 8);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                    
+                    ctx.fillStyle = currentTeam === 'red' ? '#e74c3c' : '#3498db';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${Math.round(power * 100)}%`, stone.x, stone.y - 35);
+                }
+                
+                if (Math.abs(rotationSliderPos) > 0.05) {
+                    const spinRadius = 25;
+                    ctx.strokeStyle = rotationSliderPos < 0 ? '#9b59b6' : '#27ae60';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    const startAngle = -Math.PI / 2;
+                    const endAngle = startAngle + Math.PI * 1.5 * Math.abs(rotationSliderPos) * (rotationSliderPos < 0 ? -1 : 1);
+                    ctx.arc(stone.x, stone.y, spinRadius, startAngle, endAngle, rotationSliderPos < 0);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = ctx.strokeStyle;
+                    const arrowX = stone.x + Math.cos(endAngle) * spinRadius;
+                    const arrowY = stone.y + Math.sin(endAngle) * spinRadius;
+                    ctx.beginPath();
+                    ctx.arc(arrowX, arrowY, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+        
+        function calculateEndScore() {
+            let closestRed = Infinity;
+            let closestBlue = Infinity;
+            let redPoints = 0;
+            let bluePoints = 0;
+            
+            stones.forEach(stone => {
+                const dx = stone.x - house.x;
+                const dy = stone.y - house.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (stone.team === 'red' && distance < closestRed) {
+                    closestRed = distance;
+                }
+                if (stone.team === 'blue' && distance < closestBlue) {
+                    closestBlue = distance;
+                }
+            });
+            
+            if (closestRed < closestBlue && closestRed < house.rings[0].radius) {
+                stones.forEach(stone => {
+                    if (stone.team === 'red') {
+                        const dx = stone.x - house.x;
+                        const dy = stone.y - house.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < closestBlue) {
+                            for (let ring of house.rings) {
+                                if (distance < ring.radius) {
+                                    redPoints += ring.points;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+            } else if (closestBlue < closestRed && closestBlue < house.rings[0].radius) {
+                stones.forEach(stone => {
+                    if (stone.team === 'blue') {
+                        const dx = stone.x - house.x;
+                        const dy = stone.y - house.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < closestRed) {
+                            for (let ring of house.rings) {
+                                if (distance < ring.radius) {
+                                    bluePoints += ring.points;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            redScore += redPoints;
+            blueScore += bluePoints;
+            
+            endScores.push({
+                end: currentEnd,
+                red: redPoints,
+                blue: bluePoints
+            });
+            
+            updateScoreDisplay();
+        }
+        
+        function updateScoreDisplay() {
+            document.getElementById('redScore').textContent = redScore;
+            document.getElementById('blueScore').textContent = blueScore;
+            document.getElementById('currentEnd').textContent = `${currentEnd}/${maxEnds}`;
+            document.getElementById('currentTurn').textContent = currentTeam === 'red' ? 'Rosso' : 'Blu';
+            document.getElementById('currentTurn').className = currentTeam === 'red' ? 'team-red' : 'team-blue';
+            
+            const stonesRemaining = stonesPerTeamPerEnd * 2 - stonesThrown;
+            document.getElementById('stonesLeft').textContent = `${stonesRemaining}/${stonesPerTeamPerEnd * 2}`;
+            
+            // Update end scores display
+            const endScoresDiv = document.getElementById('endScores');
+            let endScoresHTML = '<div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: bold;">Punteggi per End:</div>';
+            
+            for (let i = 1; i <= maxEnds; i++) {
+                const endScore = endScores.find(e => e.end === i);
+                const isCurrent = i === currentEnd;
+                const rowClass = isCurrent ? 'end-score-row current' : 'end-score-row';
+                
+                if (endScore) {
+                    endScoresHTML += `
+                        <div class="${rowClass}">
+                            <span class="end-label">End ${i}:</span>
+                            <span class="end-red-score">${endScore.red}</span>
+                            <span class="end-blue-score">${endScore.blue}</span>
+                        </div>
+                    `;
+                } else {
+                    endScoresHTML += `
+                        <div class="${rowClass}">
+                            <span class="end-label">End ${i}:</span>
+                            <span class="end-red-score">-</span>
+                            <span class="end-blue-score">-</span>
+                        </div>
+                    `;
+                }
+            }
+            
+            endScoresDiv.innerHTML = endScoresHTML;
+        }
+        
+        function nextEnd() {
+            currentEnd++;
+            if (currentEnd > maxEnds) {
+                // Game over
+                let winner = redScore > blueScore ? 'Rosso' : (blueScore > redScore ? 'Blu' : 'Pareggio');
+                setTimeout(() => {
+                    alert(`Partita finita!\n\nRosso: ${redScore}\nBlu: ${blueScore}\n\nVincitore: ${winner}!`);
+                }, 500);
+                return;
+            }
+            
+            stones = [];
+            stonesThrown = 0;
+            setupPrePositionedStones();
+            
+            // The team that scored last throws first in next end (or keep same if no score)
+            const lastEnd = endScores[endScores.length - 1];
+            if (lastEnd.red > lastEnd.blue) {
+                currentTeam = 'blue';
+            } else if (lastEnd.blue > lastEnd.red) {
+                currentTeam = 'red';
+            }
+            // If tie, same team continues
+            
+            updateScoreDisplay();
+        }
+        
+        function launchStone(dx, dy) {
+            if (isAnimating || stonesThrown >= stonesPerTeamPerEnd * 2) return;
+            
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const maxDistance = 200;
+            const power = Math.min(distance / maxDistance, 1);
+            
+            const speed = power * 15;
+            const vx = -(dx / distance) * speed;
+            const vy = -(dy / distance) * speed;
+            
+            const spin = rotationSliderPos * 10;
+            
+            const stone = new Stone(
+                launchArea.x,
+                launchArea.y,
+                vx,
+                vy,
+                spin,
+                currentTeam
+            );
+            
+            stones.push(stone);
+            stonesThrown++;
+            isAnimating = true;
+            
+            currentTeam = currentTeam === 'red' ? 'blue' : 'red';
+            rotationSliderPos = 0;
+            updateScoreDisplay();
+        }
+        
+        function gameLoop() {
+            drawRink();
+            
+            let anyActive = false;
+            stones.forEach(stone => {
+                stone.update();
+                if (stone.active) anyActive = true;
+            });
+            
+            for (let i = 0; i < stones.length; i++) {
+                for (let j = i + 1; j < stones.length; j++) {
+                    stones[i].checkCollision(stones[j]);
+                }
+            }
+            
+            stones.forEach(stone => stone.draw());
+            
+            drawLaunchArea();
+            
+            if (!anyActive && isAnimating) {
+                isAnimating = false;
+                
+                if (stonesThrown >= stonesPerTeamPerEnd * 2) {
+                    calculateEndScore();
+                    setTimeout(() => nextEnd(), 2000);
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function reset() {
+            stones = [];
+            currentTeam = 'red';
+            redScore = 0;
+            blueScore = 0;
+            stonesThrown = 0;
+            currentEnd = 1;
+            endScores = [];
+            isAnimating = false;
+            rotationSliderPos = 0;
+            setupPrePositionedStones();
+            updateScoreDisplay();
+        }
+        
+        // Mouse event handlers
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+        
+        function isOverStone(x, y) {
+            const dx = x - launchArea.x;
+            const dy = y - launchArea.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance <= launchArea.stoneRadius + 5;
+        }
+        
+        function isOverRotationSlider(x, y) {
+            const sliderCenterX = launchArea.x;
+            const sliderY = launchArea.rotationSliderY;
+            const sliderWidth = launchArea.rotationSliderWidth;
+            
+            return Math.abs(y - sliderY) <= 15 && 
+                   x >= sliderCenterX - sliderWidth / 2 - 20 && 
+                   x <= sliderCenterX + sliderWidth / 2 + 20;
+        }
+        
+        canvas.addEventListener('mousedown', (e) => {
+            if (isAnimating || stonesThrown >= stonesPerTeamPerEnd * 2) return;
+            
+            const pos = getMousePos(e);
+            
+            if (isOverRotationSlider(pos.x, pos.y)) {
+                isRotationDragging = true;
+                const sliderCenterX = launchArea.x;
+                const sliderWidth = launchArea.rotationSliderWidth;
+                rotationSliderPos = Math.max(-1, Math.min(1, (pos.x - sliderCenterX) / (sliderWidth / 2)));
+            } else if (isOverStone(pos.x, pos.y)) {
+                isDragging = true;
+                dragStartX = launchArea.x;
+                dragStartY = launchArea.y;
+                dragCurrentX = pos.x;
+                dragCurrentY = pos.y;
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+            
+            if (isRotationDragging) {
+                const sliderCenterX = launchArea.x;
+                const sliderWidth = launchArea.rotationSliderWidth;
+                rotationSliderPos = Math.max(-1, Math.min(1, (pos.x - sliderCenterX) / (sliderWidth / 2)));
+            } else if (isDragging) {
+                dragCurrentX = pos.x;
+                dragCurrentY = pos.y;
+            }
+            
+            if (!isAnimating && stonesThrown < stonesPerTeamPerEnd * 2) {
+                if (isOverStone(pos.x, pos.y) || isOverRotationSlider(pos.x, pos.y)) {
+                    canvas.style.cursor = 'pointer';
+                } else {
+                    canvas.style.cursor = 'crosshair';
+                }
+            }
+        });
+        
+        canvas.addEventListener('mouseup', (e) => {
+            if (isRotationDragging) {
+                isRotationDragging = false;
+            } else if (isDragging) {
+                const dx = dragCurrentX - dragStartX;
+                const dy = dragCurrentY - dragStartY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 10) {
+                    launchStone(dx, dy);
+                }
+                
+                isDragging = false;
+            }
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            isRotationDragging = false;
+        });
+        
+        // Touch events
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+        
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup', {});
+            canvas.dispatchEvent(mouseEvent);
+        });
+        
+        resetBtn.addEventListener('click', reset);
+        
+        // Initialize game
+        setupPrePositionedStones();
+        updateScoreDisplay();
+        gameLoop();
+    </script>
+</body>
+</html>
